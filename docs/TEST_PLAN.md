@@ -2,6 +2,8 @@
 
 ## Evidence as of 2026-11-09
 
+The original PASS counts below are from 2.0.0. After changing the default to On in 2.0.1, the controller tests have been updated and must be rerun in CI before making a new PASS claim.
+
 | Test | Status | Notes |
 | --- | --- | --- |
 | Node.js syntax check | PASS | `node --check safari-dark-reader.user.js` locally |
@@ -23,7 +25,7 @@ python -m playwright install chromium webkit
 REQUIRE_WEBKIT=1 python -m unittest discover -s tests -v
 ```
 
-Tests cover: Auto with light/dark OS appearance; native-dark skip; manual On override; keyboard toggling and per-site state; inputs protected from shortcut interception; theme sliders and persistence; GM storage; corrupt preference bounds; missing or throwing Dark Reader API; and avoiding redundant theme starts.
+Tests cover: default On regardless of system appearance; persisted Off and invalid preference fallback; Auto with light/dark OS appearance; native-dark skip in Auto; manual On override; keyboard toggling and per-site state; inputs protected from shortcut interception; theme sliders and persistence; GM storage; corrupt preference bounds; missing or throwing Dark Reader API; and avoiding redundant theme starts.
 
 ## Manual Safari acceptance checklist
 
