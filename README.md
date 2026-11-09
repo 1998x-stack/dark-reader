@@ -28,7 +28,17 @@ A **Safari-first** Tampermonkey userscript powered by the upstream [Dark Reader]
 - 默认跳过 Docs / Sheets / Slides / Maps / Figma / Canva / Miro 等高风险画布和编辑器站点。`@noframes` 跳过 iframe。
 - 默认不收集统计数据，没有后台服务器。**不过运行时会从第三方 CDN 下载被钉住版本的 Dark Reader 库**，并且 Dark Reader 在处理 CSS 时可能按浏览器权限请求样式资源。请不要把这理解成完全离线软件。
 
-### 故障排查
+### Safari 完全没有变暗：按顺序检查
+
+1. **网页授权**：Safari → 设置 → 扩展 → Tampermonkey，确认扩展已启用；在 Safari 的 Tampermonkey 网站访问权限中选择“始终允许所有网站”，或针对测试站点选择“始终允许”。仅在 Tampermonkey 面板中打开脚本**不代表** Safari 已允许它注入网页。
+2. **确认脚本实际运行**：在普通网页（建议 `https://example.com/`）重新载入，检查左下角是否出现“☾ 开启”和齿轮控制。若两者都不存在，优先检查网站权限、Tampermonkey 的全局启用状态、脚本是否匹配当前域名，或 `@require` 依赖是否阻止了注入。
+3. **确认版本及站点偏好**：在 Tampermonkey 的已安装脚本列表确认版本至少为 `2.0.1`，并确认脚本已启用。已有站点设置若保存为 `Auto`（macOS 浅色时通常不启用）或 `Off`，升级不会覆盖；在左下角设置中手动选 `On`，再刷新。
+4. **确认外部依赖**：若左下角显示“加载失败”，或明明有按钮却显示“错误”，检查 `https://cdn.jsdelivr.net/npm/darkreader@4.9.135/darkreader.js` 是否可以访问；它是用户脚本安装/运行所依赖的外部库。也可在 Safari 的“开发 → 显示网页检查器 → 控制台”检查报错。无法访问 CDN 时，不应将按钮状态当作网页已经着色的证明。
+5. **测试站点范围**：请用普通 `http://` / `https://` 页面测试。Safari 起始页、浏览器设置页、`file:` 页面与排除的 Google Docs/Sheets/Slides/Maps、Figma、Canva、Miro 等不在支持范围内。
+
+**三种现象的含义**：无浮动按钮 → 脚本未成功执行或被站点排除；有按钮且显示“加载失败/错误” → 引擎初始化失败；有“☾ 开启”但页面仍然白色 → 需要进一步检查网站样式、注入隔离环境和控制台报错，不要直接假定实际转换成功。
+
+### 其他故障排查
 
 - **没出现按钮**：检查 Safari 扩展是否开启、站点授权是否允许、是否属于排除的编辑器域名、Tampermonkey 是否运行。`file:`, `about:`, `safari-extension:` 不匹配 HTTP(S) userscript。
 - **显示“加载失败”**：检查 `@require` 所用 CDN 可访问性，重开脚本管理器，检查控制台；上游库没有成功加载时，本脚本不会假装已启用。
@@ -52,7 +62,7 @@ python -m playwright install chromium webkit
 REQUIRE_WEBKIT=1 python -m unittest discover -s tests -v
 ```
 
-2026-11-09 原版 2.0.0 基线：**10 组 Chromium mock-API 合约测试通过**。2.0.1 的默认 On 回归测试已更新，需以本次 CI 运行结果为准；macOS Safari + Tampermonkey、真实 `darkreader.js` 与真实网站端到端验证仍为 **NOT RUN**。详见 [测试计划](docs/TEST_PLAN.md)，不要将 mock 测试误解为 Safari 生产兼容性证明。
+2026-11-09 最新 CI：**10 组 mock-API 控制逻辑测试通过（Chromium、WebKit）**，另外 **1 组真实 Dark Reader 4.9.135 转换测试通过（Chromium、WebKit）**，确认浅色网页的实际背景被转换为深色。**macOS Safari + Tampermonkey 扩展注入、用户站点 CDN 权限与真实网站端到端验证仍为 NOT RUN**。详见 [测试计划](docs/TEST_PLAN.md)，不要将 mock 测试误解为 Safari 生产兼容性证明。
 
 ## 许可证与归属
 
