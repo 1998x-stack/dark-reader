@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Safari Dark Reader — Adaptive Site Controls
 // @namespace    https://github.com/1998x-stack/dark-reader
-// @version      2.0.0
-// @description  Dark Reader for Safari: per-site Auto/On/Off, native-theme protection, floating controls and keyboard shortcuts.
+// @version      2.0.1
+// @description  Dark Reader for Safari: dark mode enabled by default, per-site Auto/On/Off, floating controls and shortcuts.
 // @author       1998x-stack contributors
 // @license      MIT
 // @homepageURL  https://github.com/1998x-stack/dark-reader
@@ -32,6 +32,9 @@
   const SITE_KEY = `${PREFIX}site:${location.hostname.toLowerCase()}`;
   const THEME_KEY = `${PREFIX}theme`;
   const MODES = ['auto', 'on', 'off'];
+  // New sites start in dark mode regardless of macOS appearance.
+  // Previously saved per-site choices still take precedence.
+  const DEFAULT_MODE = 'on';
   const DEFAULT_THEME = Object.freeze({ brightness: 100, contrast: 90, sepia: 10 });
   const THEME_RANGES = Object.freeze({
     brightness: [75, 125], contrast: [70, 115], sepia: [0, 40],
@@ -46,7 +49,7 @@
 
   const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
   const library = typeof DarkReader !== 'undefined' ? DarkReader : null;
-  const state = { mode: 'auto', theme: { ...DEFAULT_THEME }, enabled: false,
+  const state = { mode: DEFAULT_MODE, theme: { ...DEFAULT_THEME }, enabled: false,
     native: false, error: '', saved: true, ready: false, menuOpen: false };
   let toggleButton;
   let menuButton;
@@ -59,7 +62,7 @@
   let previousSignature = '';
 
   function normalizeMode(value) {
-    return MODES.includes(value) ? value : 'auto';
+    return MODES.includes(value) ? value : DEFAULT_MODE;
   }
 
   function normalizedTheme(value) {
@@ -325,7 +328,7 @@
 
   async function initialize() {
     const [storedMode, storedTheme] = await Promise.all([
-      readSetting(SITE_KEY, 'auto'), readSetting(THEME_KEY, DEFAULT_THEME),
+      readSetting(SITE_KEY, DEFAULT_MODE), readSetting(THEME_KEY, DEFAULT_THEME),
     ]);
     state.mode = normalizeMode(storedMode);
     state.theme = normalizedTheme(storedTheme);

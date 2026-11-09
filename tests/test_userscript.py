@@ -87,26 +87,37 @@ class ScriptTests(unittest.TestCase):
         page.wait_for_function('document.getElementById("sdr-control-host") !== null')
         return context, page
 
-    def test_auto_dark_and_cycle_recovery(self):
+    def test_default_dark_on_and_cycle_recovery(self):
         for name, browser in self.browsers:
             with self.subTest(browser=name):
-                ctx, page = self.open_page(browser)
+                # Default On must start dark even when macOS prefers light.
+                ctx, page = self.open_page(browser, scheme='light')
                 self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 1)
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).theme.brightness'), 100)
-                page.keyboard.press('Alt+Shift+d')
-                self.assertEqual(page.evaluate('JSON.parse(localStorage.getItem("safari-dark-reader:v2:site:"))'), 'on')
-                page.keyboard.press('Alt+Shift+d')
+                self.assertEqual(page.locator('#sdr-control-host .bar button').first.get_attribute('data-mode'), 'on')
+                self.assertIsNone(page.evaluate('localStorage.getItem("safari-dark-reader:v2:site:")'))
+                page.keyboard.press('Alt+Shift+d')  # On -> Off
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
-                page.keyboard.press('Alt+Shift+d')
-                self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
+                self.assertEqual(page.evaluate('JSON.parse(localStorage.getItem("safari-dark-reader:v2:site:"))'), 'off')
+                page.keyboard.press('Alt+Shift+d')  # Off -> Auto
+                self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
+                page.emulate_media(color_scheme='dark')
+                page.wait_for_function('window.__drCalls.at(-1).action === "enable"', timeout=5000)
+                page.keyboard.press('Alt+Shift+d')  # Auto -> On
+                self.assertEqual(page.locator('#sdr-control-host .bar button').first.get_attribute('data-mode'), 'on')
                 ctx.close()
 
     def test_native_dark_protection_and_manual_override(self):
         for name, browser in self.browsers:
             with self.subTest(browser=name):
                 ctx, page = self.open_page(browser, path='/native')
-                self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 0)
-                page.keyboard.press('Alt+Shift+d')
+                # On explicitly overrides native-dark protection, including by default.
+                self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 1)
+                page.keyboard.press('Alt+Shift+d')  # On -> Off
+                page.keyboard.press('Alt+Shift+d')  # Off -> Auto
+                self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
+                self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 1)
+                page.keyboard.press('Alt+Shift+d')  # Auto -> On
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
                 ctx.close()
 
@@ -114,17 +125,21 @@ class ScriptTests(unittest.TestCase):
         for name, browser in self.browsers:
             with self.subTest(browser=name):
                 ctx, page = self.open_page(browser, scheme='light')
-                self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 0)
-                page.keyboard.press('Alt+Shift+d')
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
+                page.keyboard.press('Alt+Shift+d')  # On -> Off
                 stored = page.evaluate('localStorage.getItem("safari-dark-reader:v2:site:")')
-                self.assertEqual(stored, '"on"')
+                self.assertEqual(stored, '"off"')
                 ctx.close()
-                ctx, page = self.open_page(browser, scheme='light')
-                page.evaluate('localStorage.setItem("safari-dark-reader:v2:site:", "\\"on\\"")')
-                # Fresh page explicitly exercises persisted preference loading.
-                page.reload() if False else None
-                # Isolated test: evaluate saved-mode path via second injection is covered separately.
+                # A saved Off preference survives script upgrades and initial startup.
+                ctx, page = self.open_page(browser, scheme='light', seed={
+                    'safari-dark-reader:v2:site:': stored,
+                })
+                self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 0)
+                self.assertEqual(page.locator('#sdr-control-host .bar button').first.get_attribute('data-mode'), 'off')
+                page.keyboard.press('Alt+Shift+d')  # Off -> Auto
+                self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 0)
+                page.emulate_media(color_scheme='dark')
+                page.wait_for_function('window.__drCalls.at(-1).action === "enable"', timeout=5000)
                 ctx.close()
 
     def test_input_focus_keeps_keyboard_shortcuts(self):
@@ -157,6 +172,10 @@ class ScriptTests(unittest.TestCase):
                 ctx, page = self.open_page(browser)
                 page.emulate_media(color_scheme='light')
                 page.wait_for_timeout(80)
+                # Explicit On must not turn off when macOS changes appearance.
+                self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
+                page.keyboard.press('Alt+Shift+d')  # On -> Off
+                page.keyboard.press('Alt+Shift+d')  # Off -> Auto
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
                 page.emulate_media(color_scheme='dark')
                 page.wait_for_timeout(80)
@@ -202,10 +221,9 @@ class ScriptTests(unittest.TestCase):
         for name, browser in self.browsers:
             with self.subTest(browser=name):
                 ctx, page = self.open_page(browser)
+                page.keyboard.press('Alt+Shift+d')  # On -> Off
                 page.evaluate("() => { window.DarkReader.enable = () => { throw Error('theme failed') } }")
-                page.keyboard.press('Alt+Shift+d')  # on, cached
-                page.keyboard.press('Alt+Shift+d')  # off
-                page.keyboard.press('Alt+Shift+d')  # auto tries and fails
+                page.keyboard.press('Alt+Shift+d')  # Off -> Auto attempts enable and fails
                 self.assertIn('错误', page.locator('#sdr-control-host .bar button').first.inner_text())
                 ctx.close()
 

@@ -8,6 +8,8 @@ The **official Dark Reader 4.9.135 JavaScript API** handles styling. This indepe
 
 ## State machine
 
+The default mode for an unset or invalid per-site preference is **On** (dark immediately, independent of OS appearance). Existing valid site preferences remain untouched. **Auto** still means follow the OS and skip recognized native dark themes.
+
 | Site mode | System | Site originally dark | Result |
 | --- | --- | --- | --- |
 | Auto | Light | Either | Off |
