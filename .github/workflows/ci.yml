@@ -33,4 +33,16 @@ jobs:
       - name: Browser contract tests (WebKit is required)
         env:
           REQUIRE_WEBKIT: '1'
-        run: python -m unittest discover -s tests -v
+        run: python -m unittest discover -s tests -p 'test_userscript.py' -v
+      - name: Download pinned real Dark Reader runtime
+        run: |
+          curl -fLSs --retry 3 --max-time 45 \
+            https://cdn.jsdelivr.net/npm/darkreader@4.9.135/darkreader.js \
+            -o /tmp/darkreader-4.9.135.js
+          test -s /tmp/darkreader-4.9.135.js
+          node --check /tmp/darkreader-4.9.135.js
+      - name: Real-engine light-page darkening (Chromium + WebKit)
+        env:
+          DARKREADER_LIBRARY_PATH: /tmp/darkreader-4.9.135.js
+          REQUIRE_WEBKIT: '1'
+        run: python -m unittest discover -s tests -p 'test_real_engine.py' -v
