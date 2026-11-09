@@ -102,8 +102,7 @@ class ScriptTests(unittest.TestCase):
                 page.keyboard.press('Alt+Shift+d')  # Off -> Auto
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
                 page.emulate_media(color_scheme='dark')
-                page.wait_for_timeout(80)
-                self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
+                page.wait_for_function('window.__drCalls.at(-1).action === "enable"', timeout=5000)
                 page.keyboard.press('Alt+Shift+d')  # Auto -> On
                 self.assertEqual(page.locator('#sdr-control-host .bar button').first.get_attribute('data-mode'), 'on')
                 ctx.close()
