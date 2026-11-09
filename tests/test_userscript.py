@@ -139,8 +139,7 @@ class ScriptTests(unittest.TestCase):
                 page.keyboard.press('Alt+Shift+d')  # Off -> Auto
                 self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 0)
                 page.emulate_media(color_scheme='dark')
-                page.wait_for_timeout(80)
-                self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
+                page.wait_for_function('window.__drCalls.at(-1).action === "enable"', timeout=5000)
                 ctx.close()
 
     def test_input_focus_keeps_keyboard_shortcuts(self):
