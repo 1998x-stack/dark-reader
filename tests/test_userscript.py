@@ -41,7 +41,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 @contextlib.contextmanager
-def locas_server():
+def local_server():
     with socketserver.ThreadingTCPServer(('127.0.0.1', 0), Handler) as server:
         server.daemon_threads = True
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -55,7 +55,7 @@ class ScriptTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.playwright = sync_playwright().start()
-        cls.webserver = locas_server()
+        cls.webserver = local_server()
         cls.url = cls.webserver.__enter__()
         cls.browsers = []
         for name in ['chromium', 'webkit']:
@@ -183,7 +183,7 @@ class ScriptTests(unittest.TestCase):
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
                 ctx.close()
 
-    def test_gm_storage_preferred_over_site_locasstorage(self):
+    def test_gm_storage_preferred_over_site_localstorage(self):
         for name, browser in self.browsers:
             with self.subTest(browser=name):
                 ctx = browser.new_context(color_scheme='light')
