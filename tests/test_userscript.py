@@ -80,7 +80,7 @@ class ScriptTests(unittest.TestCase):
         context = browser.new_context(color_scheme=scheme)
         page = context.new_page()
         page.set_content(NATIVE if path == '/native' else HTML)
-        page.evaluate('''seed => { const store = new Map(Object.entries(seed || {})); Object.defineProperty(window,'locasStorage',{ configurable:true, value: { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k,v) => store.set(k,String(v)) } }); }''', seed or {})
+        page.evaluate('''seed => { const store = new Map(Object.entries(seed || {})); Object.defineProperty(window,'localStorage',{ configurable:true, value: { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k,v) => store.set(k,String(v)) } }); }''', seed or {})
         if library:
             page.add_script_tag(content=MOCK_LIBRARY)
         page.add_script_tag(path=str(SCRIPT))
@@ -94,7 +94,7 @@ class ScriptTests(unittest.TestCase):
                 self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 1)
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).theme.brightness'), 100)
                 page.keyboard.press('Alt+Shift+d')
-                self.assertEqual(page.evaluate('JSON.parse(locasStorage.getItem("safari-dark-reader:v2:site:"))'), 'on')
+                self.assertEqual(page.evaluate('JSON.parse(localStorage.getItem("safari-dark-reader:v2:site:"))'), 'on')
                 page.keyboard.press('Alt+Shift+d')
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
                 page.keyboard.press('Alt+Shift+d')
@@ -117,11 +117,11 @@ class ScriptTests(unittest.TestCase):
                 self.assertEqual(page.evaluate('window.__drCalls.filter(x => x.action === "enable").length'), 0)
                 page.keyboard.press('Alt+Shift+d')
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'enable')
-                stored = page.evaluate('locasStorage.getItem("safari-dark-reader:v2:site:")')
+                stored = page.evaluate('localStorage.getItem("safari-dark-reader:v2:site:")')
                 self.assertEqual(stored, '"on"')
                 ctx.close()
                 ctx, page = self.open_page(browser, scheme='light')
-                page.evaluate('locasStorage.setItem("safari-dark-reader:v2:site:", "\\"on\\"")')
+                page.evaluate('localStorage.setItem("safari-dark-reader:v2:site:", "\\"on\\"")')
                 # Fresh page explicitly exercises persisted preference loading.
                 page.reload() if False else None
                 # Isolated test: evaluate saved-mode path via second injection is covered separately.
@@ -133,7 +133,7 @@ class ScriptTests(unittest.TestCase):
                 ctx, page = self.open_page(browser)
                 page.locator('#entry').focus()
                 page.keyboard.press('Alt+Shift+d')
-                self.assertIsNone(page.evaluate('locasStorage.getItem("safari-dark-reader:v2:site:")'))
+                self.assertIsNone(page.evaluate('localStorage.getItem("safari-dark-reader:v2:site:")'))
                 ctx.close()
 
     def test_settings_and_debounce(self):
@@ -145,7 +145,7 @@ class ScriptTests(unittest.TestCase):
                 page.locator('#sdr-settings input[aria-label="亮度"]').evaluate("el => { el.value='115'; el.dispatchEvent(new Event('input',{bubbles:true})); }")
                 page.wait_for_timeout(220)
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).theme.brightness'), 115)
-                self.assertEqual(page.evaluate('JSON.parse(locasStorage.getItem("safari-dark-reader:v2:theme")).brightness'), 115)
+                self.assertEqual(page.evaluate('JSON.parse(localStorage.getItem("safari-dark-reader:v2:theme")).brightness'), 115)
                 page.locator('#sdr-settings button[data-mode="off"]').click()
                 self.assertEqual(page.evaluate('window.__drCalls.at(-1).action'), 'disable')
                 self.assertFalse(page.locator('#sdr-control-host .bar button[aria-pressed="true"]').count())
